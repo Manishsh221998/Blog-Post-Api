@@ -4,7 +4,9 @@ const UserSchema=new mongoose.Schema({
     name:{
         type:String,
         required:[true,'Please provide a name'],
-        trim:true
+        trim:true,
+        minlength:2,
+        maxlength:30
     },
     email:{
         type:String,
@@ -16,7 +18,7 @@ const UserSchema=new mongoose.Schema({
         type:String,
         required:true,
          minlength: 4,
-    },
+     },
     isVerified:{
         type:Boolean,
         default:false

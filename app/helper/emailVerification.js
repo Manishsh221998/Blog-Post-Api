@@ -1,9 +1,9 @@
 const transporter = require("../config/emailConfig");
  
-const sendEmailVerification = async (req, data) => {
+const sendEmailVerification = async (req, data,token) => {
   try {
     // Create verification link (adjust the URL as needed for your application)
-     const verificationLink = `${process.env.BASE_URL}/verify-email/${data._id}`;
+     const verificationLink = `${process.env.BASE_URL}/api/auth/verify-email/${data._id}/${token}`;
     
     const info = await transporter.sendMail({
       from: `"Blog Post" <${process.env.EMAIL_FROM}>`,
@@ -16,14 +16,13 @@ const sendEmailVerification = async (req, data) => {
           <p>Thank you for registering. Please verify your email address to complete your account setup.</p>
           <p style="margin: 20px 0;">
             <a href="${verificationLink}" 
-               style="background-color: #4CAF50; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
+               style="background-color: #309722ff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
               Verify Email Address
             </a>
           </p>
           <p>Or copy and paste this link into your browser:</p>
           <p style="word-break: break-all;">${verificationLink}</p>
-          <p>If you didn't create an account with BookMyMovie, you can safely ignore this email.</p>
-          <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+           <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
           <p style="font-size: 12px; color: #777;">This email was sent to ${data.email} as part of your Blogging app account registration.</p>
         </div>
       `,

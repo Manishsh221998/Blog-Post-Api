@@ -8,70 +8,66 @@ const UserModel = require("../models/Users");
  const path=require('path')
 
 class AuthController{
- 
 
-    // Get all roles
-  async getAllRoles(req, res){
-  try {
-    const roles = await RoleModel.find();
-    res.status(200).json({
-      count: roles.length,
-      roles
-    });
-  } catch (error) {
-    console.error('Error fetching roles:', error);
-    res.status(500).json({ message: 'Server error while fetching roles' });
-  }
-    };
-    
     // --------------User Authentication-------------------
-    async registerUser(req,res){
-        // console.log(req.body)
-        try {
-            const{name,email,password}=req.body
-            let userImage
-            if(req.file){
-               userImage=req.file.path 
-            }
-            if(!(name,email,password)){
-                res.status(404).json({message:"All fileds are required !"})
-            }
+    async registerUser(req, res) {
+    try {
+      const { name, email, password } = req.body;
+      let userImage;
 
-            const exitingUser=await UserModel.findOne({email})
-            if(exitingUser){
-                  res.status(404).json({
-                    status:false,
-                    message:"User already exists",
-                     
-                })
-            }
-          
+      if (!name || !email || !password) {
+        if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+        return res.status(400).json({ message: "All fields are required!" });
+      }
 
-            const passwordHased=await hashPassword(password)
-            const data=await UserModel.create({name,email,password:passwordHased,image:userImage})
-            const token= await generateUserToken(data)
-            // console.log(token)
+      if (req.file) {
+        userImage = req.file.path;
+      }
 
-            if(data){
-                res.status(201).json({
-                    status:true,
-                    message:"User created successfully",
-                    data,
-                    token
-                })
-            }
-            await sendEmailVerification(req,data)
-        } catch (error) {
-            console.log("Error while register : ",error.message)
-        }
+      const existingUser = await UserModel.findOne({ email });
+      if (existingUser) {
+        if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+        return res.status(409).json({
+          status: false,
+          message: "User already exists"
+        });
+      }
+
+      const passwordHashed = await hashPassword(password);
+      const newUser = await UserModel.create({
+        name,
+        email,
+        password: passwordHashed,
+        image: userImage
+      });
+
+      const token = await generateUserToken(newUser);
+      await sendEmailVerification(req, newUser, token);
+
+      return res.status(201).json({
+        status: true,
+        message: "User created successfully",
+        data: newUser,
+        token
+      });
+
+    } catch (error) {
+      console.error("Register Error:", error);
+      if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+      return res.status(500).json({
+        status: false,
+        message: "Internal server error",
+        error: error.message  // You can remove this in production
+      });
     }
+  }
 
     async verifyEmail(req,res){
         try {
-            const {id}=req.params
-            // const decode=jwt.verify(token,process.env.JWT_SECRET_KEY)
+            const {token}=req.params
+            const decode=jwt.verify(token,process.env.JWT_SECRET_KEY)
             // console.log(decode)
-            await UserModel.findByIdAndUpdate(id,{isVerified:true})
+            await UserModel.findByIdAndUpdate(decode.userId,{isVerified:true})
             res.send("Email Verified")
         } catch (error) {
             
@@ -87,12 +83,11 @@ class AuthController{
         }
 
         const exitingUser = await UserModel.findOne({ email });
-            const token= await generateUserToken(exitingUser)
 
         if (!exitingUser) {
             return res.status(400).json({
                 status: false,
-                message: "User not exists",
+                message: "User does not exist",
             });
         }
 
@@ -105,19 +100,20 @@ class AuthController{
         }
 
         if (!exitingUser.isVerified) {
-            await sendEmailVerification(req,exitingUser);
-            return res.status(400).json({
+             return res.status(400).json({
                 status: false,
-                message: "User is not verified, new verification link sent to your email",
+                message: "User is not verified",
             });
         }
+
+         const token = await generateUserToken(exitingUser);
 
         return res.status(200).json({
             status: true,
             message: "Logged in successfully",
             token,
-            exitingUser
-         });
+            // exitingUser
+        });
 
     } catch (error) {
         console.log(error);
@@ -126,7 +122,7 @@ class AuthController{
             message: "Internal server error"
         });
     }
-    }
+}
 
     async profile(req,res){
        try {
@@ -144,7 +140,7 @@ class AuthController{
 
     async updateProfile(req, res) {
     try {
-    const{name,newPassword}=req.body
+    const{name,newPassword,email}=req.body
         const id = req.user.userId; 
         if (!req.file) {
             return res.status(400).json({
@@ -153,8 +149,7 @@ class AuthController{
             });
         }
 
-        // Find the user
-        const user = await UserModel.findById(id);
+         const user = await UserModel.findById(id);
         if (!user) {
             return res.status(404).json({
                 status: false,
@@ -162,16 +157,14 @@ class AuthController{
             });
         }
 
-        // Delete old image if it exists
-        if (user.image && fs.existsSync(user.image)) {
+         if (user.image && fs.existsSync(user.image)) {
             fs.unlinkSync(user.image);
         }
 
-          // Update user with new image path using findByIdAndUpdate
-    const updatedUser = await UserModel.findByIdAndUpdate(
+     const updatedUser = await UserModel.findByIdAndUpdate(
       id,
-      { image: req.file.path,name,password:await hashPassword(newPassword)},
-      { new: true } // Return the updated document
+      { image: req.file.path,name,email,password:await hashPassword(newPassword)},
+      { new: true }  
     );
 
         return res.status(200).json({
@@ -181,6 +174,9 @@ class AuthController{
         });
 
     } catch (error) {
+        if (req.file && fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+    }
         console.error("Error updating profile image:", error);
         return res.status(500).json({
             status: false,

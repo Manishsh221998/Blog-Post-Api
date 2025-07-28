@@ -39,6 +39,29 @@ class CategoryController {
     }
   }
 
+  async listCategories(req, res) {
+    try {
+      const categories = await Category.aggregate([{
+        $project: {
+          name: 1,
+          description: 1,
+        },
+      }]);
+      res.status(200).json({
+        success: true,
+        message: 'Categories fetched successfully.',
+        totalCategories: categories.length,
+        data: categories,
+      });
+    } catch (error) {
+      console.error('List Categories Error:', error);
+      res.status(500).json({
+        success: false,
+         error: error.message,
+      });
+    }
+  }
+
   // List categories with blog posts and post count
   async listCategoriesWithPosts(req, res) {
     try {
@@ -57,10 +80,13 @@ class CategoryController {
           },
         },
         {
+          $sort: { postCount: -1 },
+        },
+        {
           $project: {
             name: 1,
-            description: 1,
             postCount: 1,
+            description: 1,
             posts: {
               _id:1,
               title: 1,
@@ -82,7 +108,7 @@ class CategoryController {
       console.error('List Categories Error:', error);
       res.status(500).json({
         success: false,
-        message: 'An error occurred while retrieving categories. Please try again later.',
+        message: 'An error occurred while retrieving categories.',
         error: error.message,
       });
     }

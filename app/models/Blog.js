@@ -30,6 +30,12 @@ const blogSchema = new mongoose.Schema(
       default: 0,
       min: 0,
     },
+     likedBy: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+      }
+    ],
   },
   {versionKey:false,
     timestamps: true

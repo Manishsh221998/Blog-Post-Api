@@ -2,7 +2,7 @@ const jwt=require('jsonwebtoken')
 
 const AuthCheck= async (req,res,next)=>{
 try {
-    const token=req.headers['authorization']||req.headers['x-access-token']||req.body.token||req.params.token||req.query.token;
+    const token=req.headers['authorization']||req.headers['x-access-token']||req.body?.token||req.params?.token||req.query?.token;
     if(!token){
           return res.status(400).json({
              status:false,

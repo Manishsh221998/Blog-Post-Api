@@ -6,6 +6,7 @@ const AuthCheck = require('../middleware/authCheck');
 router.use(AuthCheck);
 
 router.post('/create/blog', BlogController.createBlog);
+ 
 router.get('/blogs', BlogController.getAllBlogs);
 router.put('/update/blog/:id', BlogController.editBlog);
 router.delete('/delete/blog/:id', BlogController.deleteBlog);

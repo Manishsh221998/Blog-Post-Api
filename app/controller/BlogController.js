@@ -88,30 +88,43 @@ class BlogController {
     }
   }
   
-//Like BLogs
-  async likeBlog(req, res) {
-    try {
-      const blogId = req.params.id;
+ 
+ // Like a blog only once per user
+async likeBlog(req, res) {
+  try {
+    const blogId = req.params.id;
+    const userId = req.user.userId;
 
-      const blog = await Blog.findByIdAndUpdate(
-        blogId,
-        { $inc: { likes: 1 } },
-        { new: true }
-      );
-
-      if (!blog) {
-        return res.status(404).json({ error: 'Blog not found.' });
-      }
-
-      return res.json({
-        message: 'Blog liked successfully.',
-        data: blog
-      });
-    } catch (error) {
-      console.error('Error liking blog:', error);
-      return res.status(500).json({ error: 'Server error while liking blog.' });
+    const blog = await Blog.findById(blogId);
+    if (!blog) {
+      return res.status(404).json({ error: 'Blog not found.' });
     }
+
+    if (blog.likedBy && blog.likedBy.includes(userId)) {
+      return res.status(400).json({
+        status: false,
+        message: 'You have already liked this blog.'
+      });
+    }
+
+    blog.likes += 1;
+    blog.likedBy.push(userId);
+    await blog.save();
+
+    return res.status(200).json({
+      status: true,
+      message: 'Blog liked successfully.',
+      data: blog
+    });
+  } catch (error) {
+    console.error('Error liking blog:', error);
+    return res.status(500).json({
+      status: false,
+      error: 'Server error while liking blog.'
+    });
   }
+}
+
 
   // Get all blogs sorted by number of likes
   async getBlogsSortedByLikes(req, res) {
